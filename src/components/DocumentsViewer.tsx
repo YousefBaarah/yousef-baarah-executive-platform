@@ -90,6 +90,17 @@ export const DocumentsViewer: React.FC = () => {
 
           {/* Quick Action Controls */}
           <div className="lg:col-span-7 flex flex-wrap items-center justify-start lg:justify-end gap-3">
+            <a
+              href="/ai-review-dossier.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-[#B8964A]/15 to-[#B8964A]/5 border border-[#B8964A]/40 text-[#0D2B4E] rounded text-xs uppercase tracking-wider font-bold hover:bg-[#B8964A]/25 transition-all shadow-sm"
+              title="Open standalone HTML package for Claude, Grok, ChatGPT, DeepSeek"
+            >
+              <Sparkles className="w-4 h-4 text-[#B8964A]" />
+              <span>AI Review Dossier (HTML)</span>
+            </a>
+
             <button
               onClick={handleCopyText}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-[#0D2B4E]/15 text-[#0D2B4E] rounded text-xs uppercase tracking-wider font-semibold hover:bg-[#0D2B4E]/5 transition-colors shadow-sm"

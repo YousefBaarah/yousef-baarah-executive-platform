@@ -40,6 +40,14 @@ export const Footer: React.FC = () => {
             <a href="#documents" className="hover:text-white transition-colors">
               Documents
             </a>
+            <a
+              href="/ai-review-dossier.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#E6D2A8] hover:text-white font-semibold transition-colors flex items-center gap-1"
+            >
+              <span>AI Review Package (HTML)</span>
+            </a>
             <a href="#contact" className="hover:text-white transition-colors">
               Contact
             </a>
