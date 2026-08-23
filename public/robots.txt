@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ygb-executive-profile.netlify.app/sitemap.xml
