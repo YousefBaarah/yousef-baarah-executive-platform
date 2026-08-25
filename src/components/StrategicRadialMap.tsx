@@ -112,7 +112,7 @@ const STRATEGIC_RADIAL_DATA: {
     {
       id: 'core-ygb',
       name: 'Yousef G. Baarah',
-      nameAr: 'يوسف غازي بعارة',
+      nameAr: 'يوسف غسّان بعارة',
       category: 'core',
       description:
         'Sovereign Strategic Communications, Broadcast Media Leadership, and High-Yield Commercial Revenue Architecture.',

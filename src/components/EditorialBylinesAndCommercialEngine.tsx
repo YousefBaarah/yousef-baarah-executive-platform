@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import yousefHeroPortrait from '../assets/images/yousef-baarah-profile.jpg';
+import yousefHeroPortrait from '../assets/images/yousef_baarah_profile_1787473817180.jpg';
 import venturePrintArchiveImg from '../assets/images/venture_print_archive_1787473940962.jpg';
-import galaEventImg from '../assets/images/yousef-baarah-event.jpg';
+import galaEventImg from '../assets/images/yousef_baarah_event_1787473878121.jpg';
 import soulArabiaCaroleImg from '../assets/images/soul_arabia_carole_deadsea_1787477002615.jpg';
 import {
   BookOpen,
@@ -329,12 +329,12 @@ export const EditorialBylinesAndCommercialEngine: React.FC = () => {
           <div className="space-y-6 animate-in fade-in duration-300">
             {/* Author Credential Card */}
             <div className="bg-gradient-to-r from-[#060F1A] via-[#0D2B4E] to-[#143E6B] rounded-2xl p-6 text-white border border-[#B8964A]/30 shadow-lg flex flex-col md:flex-row items-center gap-6">
-              <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-[#B8964A] shadow-md shrink-0">
+              <div className="relative w-[98px] h-[98px] rounded-full overflow-hidden border-2 border-[#B8964A] shadow-md shrink-0 bg-black">
                 <img
                   src={yousefHeroPortrait}
                   alt="Yousef G. Baarah - Author & Editor"
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover object-top"
+                  className="w-[98px] h-[98px] pt-0 pb-0 pl-0 ml-0 bg-black object-cover object-top"
                 />
               </div>
               <div className="space-y-1.5 text-center md:text-left rtl:md:text-right flex-1">

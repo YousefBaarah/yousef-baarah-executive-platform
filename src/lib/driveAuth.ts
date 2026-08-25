@@ -44,6 +44,35 @@ export const initAuth = (
   });
 };
 
+export interface AuthErrorDetails {
+  isUnauthorizedDomain: boolean;
+  domain: string;
+  originalMessage: string;
+  friendlyMessage: string;
+}
+
+export const formatAuthError = (error: any): AuthErrorDetails => {
+  const code = error?.code || '';
+  const message = error?.message || String(error);
+  const domain = typeof window !== 'undefined' ? window.location.hostname : '';
+  const isUnauthorizedDomain =
+    code === 'auth/unauthorized-domain' ||
+    message.includes('auth/unauthorized-domain') ||
+    message.includes('unauthorized-domain');
+
+  let friendlyMessage = message;
+  if (isUnauthorizedDomain) {
+    friendlyMessage = `Current domain (${domain}) is not authorized in Firebase Authentication.`;
+  }
+
+  return {
+    isUnauthorizedDomain,
+    domain,
+    originalMessage: message,
+    friendlyMessage,
+  };
+};
+
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
   try {
     isSigningIn = true;

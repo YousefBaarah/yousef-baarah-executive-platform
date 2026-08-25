@@ -2,8 +2,8 @@ import { StrategicMandate, EcosystemPartner, PlaybookPhase, Endorsement, MediaRe
 import royaTvAppImg from '../assets/images/roya_tv_app_store_rank1_1787472789566.jpg';
 import royaPressPassImg from '../assets/images/roya_press_id_pass_1787472806790.jpg';
 import ammanTvBroadcastImg from '../assets/images/YGB-in-ammantv.jpg';
-import yousefProfileImg from '../assets/images/yousef-baarah-profile.jpg';
-import yousefEventImg from '../assets/images/yousef-baarah-event.jpg';
+import yousefProfileImg from '../assets/images/yousef_baarah_profile_1787473817180.jpg';
+import yousefEventImg from '../assets/images/yousef_baarah_event_1787473878121.jpg';
 import venturePrintArchiveImg from '../assets/images/venture_print_archive_1787473940962.jpg';
 import soulArabiaCaroleImg from '../assets/images/soul_arabia_carole_deadsea_1787477002615.jpg';
 

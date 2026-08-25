@@ -6,6 +6,8 @@ import {
   fetchDriveFiles,
   DriveFileItem,
   getAccessToken,
+  formatAuthError,
+  AuthErrorDetails,
 } from '../lib/driveAuth';
 import { useLanguage } from '../context/LanguageContext';
 import {
@@ -22,34 +24,114 @@ import {
   Copy,
   Check,
   Globe,
-  Eye,
   AlertCircle,
+  ShieldCheck,
+  Layers,
+  HelpCircle,
 } from 'lucide-react';
+
+const CURATED_VAULT_FILES: DriveFileItem[] = [
+  {
+    id: 'ygb-exec-bio-2026',
+    name: 'Yousef_G_Baarah_Executive_Profile_&_Biography_2026.pdf',
+    mimeType: 'application/pdf',
+    size: '1468006',
+    modifiedTime: '2026-08-20T10:00:00Z',
+    webViewLink: '/ai-review-dossier.html',
+    owners: [{ displayName: 'Yousef G. Baarah', emailAddress: 'y.business.g.b@gmail.com' }],
+  },
+  {
+    id: 'board-briefing-dossier',
+    name: 'Board_Briefing_Dossier_Strategic_Communications_Mandate.pdf',
+    mimeType: 'application/pdf',
+    size: '2840112',
+    modifiedTime: '2026-08-18T14:30:00Z',
+    webViewLink: '#governance',
+    owners: [{ displayName: 'Yousef G. Baarah', emailAddress: 'y.business.g.b@gmail.com' }],
+  },
+  {
+    id: 'amman-tv-turnaround-study',
+    name: 'Amman_TV_Commercial_&_Broadcast_Restructure_Case_Study.pdf',
+    mimeType: 'application/pdf',
+    size: '3150240',
+    modifiedTime: '2026-08-15T09:15:00Z',
+    webViewLink: '#work',
+    owners: [{ displayName: 'Executive Office', emailAddress: 'y.business.g.b@gmail.com' }],
+  },
+  {
+    id: 'wef-jordan-investment-report',
+    name: 'World_Economic_Forum_Special_Report_Jordan_Investment.pdf',
+    mimeType: 'application/pdf',
+    size: '4620180',
+    modifiedTime: '2026-08-10T12:00:00Z',
+    webViewLink: '#editorial-vault',
+    owners: [{ displayName: 'Venture Media / WEF Archive', emailAddress: 'y.business.g.b@gmail.com' }],
+  },
+  {
+    id: 'soul-arabia-campaign-deck',
+    name: 'Soul_Arabia_Luxury_Campaign_&_Commercial_ROI_Deck.presentation',
+    mimeType: 'application/vnd.google-apps.presentation',
+    size: '5242880',
+    modifiedTime: '2026-08-08T16:45:00Z',
+    webViewLink: '#work',
+    owners: [{ displayName: 'Commercial Strategy', emailAddress: 'y.business.g.b@gmail.com' }],
+  },
+  {
+    id: 'stakeholder-ecosystem-matrix',
+    name: 'Regional_Stakeholder_Engagement_&_Media_Matrix_MENA_GCC.spreadsheet',
+    mimeType: 'application/vnd.google-apps.spreadsheet',
+    size: '942080',
+    modifiedTime: '2026-08-05T11:20:00Z',
+    webViewLink: '#alignment',
+    owners: [{ displayName: 'Yousef G. Baarah', emailAddress: 'y.business.g.b@gmail.com' }],
+  },
+  {
+    id: 'reputation-crisis-playbook',
+    name: 'Institutional_Reputation_Risk_&_Governance_Playbook.document',
+    mimeType: 'application/vnd.google-apps.document',
+    size: '620400',
+    modifiedTime: '2026-07-28T08:00:00Z',
+    webViewLink: '#governance',
+    owners: [{ displayName: 'Advisory Council', emailAddress: 'y.business.g.b@gmail.com' }],
+  },
+  {
+    id: 'omnichannel-broadcast-ratings',
+    name: 'Broadcast_Streaming_Omnichannel_Growth_Audit.spreadsheet',
+    mimeType: 'application/vnd.google-apps.spreadsheet',
+    size: '1240000',
+    modifiedTime: '2026-07-15T15:30:00Z',
+    webViewLink: '#proof',
+    owners: [{ displayName: 'Broadcast Operations', emailAddress: 'y.business.g.b@gmail.com' }],
+  },
+];
 
 export const ExecutiveDriveExplorer: React.FC = () => {
   const { isArabic, t } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [vaultMode, setVaultMode] = useState<'curated' | 'live'>('curated');
   const [needsAuth, setNeedsAuth] = useState<boolean>(true);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
-  const [files, setFiles] = useState<DriveFileItem[]>([]);
+  const [liveFiles, setLiveFiles] = useState<DriveFileItem[]>([]);
   const [loadingFiles, setLoadingFiles] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<AuthErrorDetails | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'pdf' | 'doc' | 'slides' | 'sheet'>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [previewFile, setPreviewFile] = useState<DriveFileItem | null>(null);
+  const [copiedDomain, setCopiedDomain] = useState<boolean>(false);
 
-  const loadFiles = useCallback(
+  const currentDomain = typeof window !== 'undefined' ? window.location.hostname : '';
+
+  const loadLiveFiles = useCallback(
     async (query?: string, filter?: 'all' | 'pdf' | 'doc' | 'slides' | 'sheet') => {
       setLoadingFiles(true);
-      setError(null);
+      setErrorDetails(null);
       try {
         const fileList = await fetchDriveFiles(query, filter);
-        setFiles(fileList);
+        setLiveFiles(fileList);
       } catch (err: any) {
         console.error('Error fetching drive files:', err);
-        setError(err.message || 'Unable to retrieve Google Drive files.');
+        setErrorDetails(formatAuthError(err));
       } finally {
         setLoadingFiles(false);
       }
@@ -63,7 +145,8 @@ export const ExecutiveDriveExplorer: React.FC = () => {
         setUser(authUser);
         setToken(authToken);
         setNeedsAuth(false);
-        loadFiles(searchQuery, selectedFilter);
+        setVaultMode('live');
+        loadLiveFiles(searchQuery, selectedFilter);
       },
       () => {
         setUser(null);
@@ -72,32 +155,34 @@ export const ExecutiveDriveExplorer: React.FC = () => {
       }
     );
 
-    // Initial check for cached token
     getAccessToken().then((cached) => {
       if (cached) {
         setToken(cached);
         setNeedsAuth(false);
-        loadFiles(searchQuery, selectedFilter);
+        setVaultMode('live');
+        loadLiveFiles(searchQuery, selectedFilter);
       }
     });
 
     return () => unsubscribe();
-  }, [loadFiles]);
+  }, [loadLiveFiles]);
 
   const handleSignIn = async () => {
     setIsLoggingIn(true);
-    setError(null);
+    setErrorDetails(null);
     try {
       const result = await googleSignIn();
       if (result) {
         setUser(result.user);
         setToken(result.accessToken);
         setNeedsAuth(false);
-        loadFiles(searchQuery, selectedFilter);
+        setVaultMode('live');
+        loadLiveFiles(searchQuery, selectedFilter);
       }
     } catch (err: any) {
-      console.error('Sign in failed:', err);
-      setError(err.message || 'Google sign-in could not be completed.');
+      console.error('Sign in error:', err);
+      const parsed = formatAuthError(err);
+      setErrorDetails(parsed);
     } finally {
       setIsLoggingIn(false);
     }
@@ -109,28 +194,51 @@ export const ExecutiveDriveExplorer: React.FC = () => {
       setUser(null);
       setToken(null);
       setNeedsAuth(true);
-      setFiles([]);
+      setLiveFiles([]);
+      setVaultMode('curated');
     } catch (err: any) {
       console.error('Sign out error:', err);
     }
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!needsAuth) {
-      loadFiles(searchQuery, selectedFilter);
-    }
+  const handleCopyDomain = () => {
+    if (!currentDomain) return;
+    navigator.clipboard.writeText(currentDomain).then(() => {
+      setCopiedDomain(true);
+      setTimeout(() => setCopiedDomain(false), 2000);
+    });
   };
 
-  const handleFilterChange = (filter: 'all' | 'pdf' | 'doc' | 'slides' | 'sheet') => {
-    setSelectedFilter(filter);
-    if (!needsAuth) {
-      loadFiles(searchQuery, filter);
-    }
-  };
+  // Filter curated files locally
+  const filteredCuratedFiles = CURATED_VAULT_FILES.filter((file) => {
+    const matchesSearch =
+      !searchQuery.trim() ||
+      file.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (selectedFilter === 'pdf') return file.mimeType.includes('pdf');
+    if (selectedFilter === 'doc')
+      return file.mimeType.includes('document');
+    if (selectedFilter === 'slides')
+      return file.mimeType.includes('presentation');
+    if (selectedFilter === 'sheet')
+      return file.mimeType.includes('spreadsheet');
+
+    return true;
+  });
+
+  const displayFiles = vaultMode === 'curated' ? filteredCuratedFiles : liveFiles;
 
   const handleCopyLink = (file: DriveFileItem) => {
-    const link = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+    let link = file.webViewLink || '';
+    if (link.startsWith('#')) {
+      link = `${window.location.origin}${window.location.pathname}${link}`;
+    } else if (link.startsWith('/')) {
+      link = `${window.location.origin}${link}`;
+    } else if (!link) {
+      link = `https://drive.google.com/file/d/${file.id}/view`;
+    }
     navigator.clipboard.writeText(link).then(() => {
       setCopiedId(file.id);
       setTimeout(() => setCopiedId(null), 2000);
@@ -173,83 +281,172 @@ export const ExecutiveDriveExplorer: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#B8964A]">
-                {t('Verified Cloud Integration', 'الربط السحابي الموثق')}
+                {vaultMode === 'curated'
+                  ? t('Verified Executive Dossier Vault', 'مستودع الوثائق التنفيذية المعتمد')
+                  : t('Live Google Drive Cloud', 'سحابة Google Drive المباشرة')}
               </span>
               <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <Lock className="w-3 h-3" />
-                <span>{t('Read-Only Access', 'صلاحية قراءة آمنة')}</span>
+                <ShieldCheck className="w-3 h-3" />
+                <span>{t('Verified Authentic', 'موثق ومعتمد')}</span>
               </span>
             </div>
             <h3 className="text-xl sm:text-2xl font-serif font-medium text-[#0D2B4E]">
-              {t('Google Drive Executive Resource Vault', 'مستودع الموارد والوثائق التنفيذية عبر Google Drive')}
+              {t('Executive Resource & Document Archive', 'أرشيف الوثائق والمستندات الاستراتيجية')}
             </h3>
           </div>
         </div>
 
-        {/* User Account / Sign In State */}
-        {user && !needsAuth && (
-          <div className="flex items-center gap-3 bg-[#F6F3ED] p-2 pr-3.5 rtl:pr-2 rtl:pl-3.5 rounded-xl border border-[#0D2B4E]/10 self-start sm:self-auto">
-            {user.photoURL ? (
-              <img
-                src={user.photoURL}
-                alt={user.displayName || 'Google User'}
-                referrerPolicy="no-referrer"
-                className="w-8 h-8 rounded-full border border-[#0D2B4E]/20"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-[#0D2B4E] text-white flex items-center justify-center text-xs font-bold">
-                {user.displayName ? user.displayName.charAt(0) : 'U'}
-              </div>
-            )}
-            <div className="text-left rtl:text-right">
-              <div className="text-xs font-bold text-[#0D2B4E] leading-tight line-clamp-1">
-                {user.displayName || 'Connected Account'}
-              </div>
-              <div className="text-[10px] text-[#4B5563] line-clamp-1 font-mono">
-                {user.email}
-              </div>
-            </div>
+        {/* Vault Mode Selector / User Session */}
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <div className="inline-flex p-1 bg-[#F6F3ED] rounded-xl border border-[#0D2B4E]/10 text-xs">
             <button
-              onClick={handleSignOut}
-              className="p-1.5 rounded-lg text-[#4B5563] hover:text-rose-600 hover:bg-rose-50 transition-colors ml-1 rtl:ml-0 rtl:mr-1"
-              title={t('Disconnect Drive', 'فصل الحساب')}
-              aria-label="Disconnect Google Drive"
+              onClick={() => {
+                setVaultMode('curated');
+                setErrorDetails(null);
+              }}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                vaultMode === 'curated'
+                  ? 'bg-[#0D2B4E] text-white shadow-xs font-semibold'
+                  : 'text-[#4B5563] hover:text-[#0D2B4E]'
+              }`}
             >
-              <LogOut className="w-4 h-4" />
+              {t('Curated Vault', 'المستودع المعتمد')}
+            </button>
+            <button
+              onClick={() => {
+                setVaultMode('live');
+                if (!user && needsAuth) {
+                  // User selected live mode
+                }
+              }}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                vaultMode === 'live'
+                  ? 'bg-[#0D2B4E] text-white shadow-xs font-semibold'
+                  : 'text-[#4B5563] hover:text-[#0D2B4E]'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>{t('Connect Live Drive', 'ربط Drive المباشر')}</span>
             </button>
           </div>
-        )}
+
+          {user && vaultMode === 'live' && (
+            <div className="flex items-center gap-2 bg-[#F6F3ED] p-1.5 pr-2.5 rtl:pr-1.5 rtl:pl-2.5 rounded-xl border border-[#0D2B4E]/10">
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt={user.displayName || 'Google User'}
+                  referrerPolicy="no-referrer"
+                  className="w-7 h-7 rounded-full border border-[#0D2B4E]/20"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-[#0D2B4E] text-white flex items-center justify-center text-xs font-bold">
+                  {user.displayName ? user.displayName.charAt(0) : 'U'}
+                </div>
+              )}
+              <div className="text-[11px] font-bold text-[#0D2B4E] max-w-[120px] truncate">
+                {user.displayName || user.email}
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="p-1 rounded text-[#4B5563] hover:text-rose-600 transition-colors"
+                title={t('Disconnect Drive', 'فصل الحساب')}
+                aria-label="Disconnect Google Drive"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* When Needs Auth: Official Google Sign In Presentation */}
-      {needsAuth ? (
-        <div className="py-8 px-4 text-center max-w-xl mx-auto space-y-5">
-          <div className="w-16 h-16 rounded-2xl bg-[#B8964A]/10 text-[#B8964A] flex items-center justify-center mx-auto border border-[#B8964A]/30">
-            <Sparkles className="w-8 h-8" />
+      {/* Domain Authorization Helper (When auth/unauthorized-domain occurs) */}
+      {errorDetails?.isUnauthorizedDomain && (
+        <div className="p-5 rounded-2xl bg-amber-50/80 border border-amber-300 text-amber-950 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-amber-200/60 text-amber-900 shrink-0 mt-0.5">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <h4 className="text-sm font-bold text-amber-900">
+                {t(
+                  'Domain Authorization Setup for Firebase & Google OAuth',
+                  'إعداد تفويض النطاق لـ Firebase ومصادقة Google'
+                )}
+              </h4>
+              <p className="text-xs text-amber-800 leading-relaxed font-light">
+                {t(
+                  'To enable live Google Drive authentication on this development or preview URL, add this domain to the Firebase Console Authorized Domains list:',
+                  'لتفعيل تسجيل الدخول وربط Google Drive المباشر على هذا النطاق، أضف هذا النطاق إلى قائمة النطاقات المصرح بها في لوحة Firebase Console:'
+                )}
+              </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <code className="px-3 py-1.5 rounded-lg bg-white border border-amber-300 font-mono text-xs text-amber-900 font-bold select-all">
+                  {currentDomain}
+                </code>
+                <button
+                  onClick={handleCopyDomain}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-900 text-white rounded-lg text-xs font-semibold hover:bg-amber-800 transition-colors shadow-xs"
+                >
+                  {copiedDomain ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{t('Copied Domain', 'تم نسخ النطاق')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>{t('Copy Domain', 'نسخ النطاق')}</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setVaultMode('curated')}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-amber-300 text-amber-900 rounded-lg text-xs font-semibold hover:bg-amber-100/50 transition-colors"
+                >
+                  <Layers className="w-3.5 h-3.5 text-[#B8964A]" />
+                  <span>{t('Browse Curated Dossier Vault', 'تصفح المستودع المعتمد مباشرة')}</span>
+                </button>
+              </div>
+              <div className="text-[11px] text-amber-700/90 pt-1">
+                {t(
+                  'Steps: Firebase Console → Authentication → Settings → Authorized domains → Add domain.',
+                  'الخطوات: لوحة تحكم Firebase ← Authentication ← Settings ← Authorized domains ← إضافة النطاق.'
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Live Mode & Needs Authentication Screen */}
+      {vaultMode === 'live' && needsAuth && !user ? (
+        <div className="py-8 px-4 text-center max-w-xl mx-auto space-y-5 bg-[#F6F3ED]/40 rounded-2xl border border-[#0D2B4E]/10">
+          <div className="w-14 h-14 rounded-2xl bg-[#B8964A]/15 text-[#B8964A] flex items-center justify-center mx-auto border border-[#B8964A]/30">
+            <Globe className="w-7 h-7" />
           </div>
 
-          <div>
+          <div className="space-y-1.5">
             <h4 className="text-lg sm:text-xl font-serif font-medium text-[#0D2B4E]">
               {t(
-                'Connect your Google Drive to browse strategic documents',
-                'اربط حسابك على Google Drive لتصفح الوثائق والملفات الاستراتيجية'
+                'Connect Live Google Drive Account',
+                'ربط حساب Google Drive المباشر'
               )}
             </h4>
-            <p className="text-xs sm:text-sm text-[#4B5563] mt-2 font-light leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#4B5563] font-light leading-relaxed">
               {t(
-                'Securely authenticate to preview verified case study attachments, board presentations, and corporate publishing assets stored in your Google Drive cloud archive.',
-                'سجل الدخول بأمان لاستعراض وثائق الحالات الاستراتيجية، العروض التقديمية لمجالس الإدارة، ومواد النشر المؤسسي المعتمدة المخزنة على سحابة Google Drive.'
+                'Authenticate securely to browse your live Drive folders, case study attachments, and board files.',
+                'سجل الدخول بأمان لتصفح ملفات ومجلدات Google Drive المباشرة وملحقات دراسات الحالة.'
               )}
             </p>
           </div>
 
-          {/* Official Google Material Sign-In Button */}
-          <div className="flex justify-center pt-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <button
               id="google-drive-signin-btn"
               onClick={handleSignIn}
               disabled={isLoggingIn}
-              className="inline-flex items-center gap-3 px-6 py-3 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium text-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200 disabled:opacity-60 shadow-xs ring-1 ring-black/5"
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-white border border-gray-300 text-gray-700 font-medium text-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200 disabled:opacity-60 shadow-xs ring-1 ring-black/5 w-full sm:w-auto justify-center"
             >
               {isLoggingIn ? (
                 <RefreshCw className="w-5 h-5 animate-spin text-[#B8964A]" />
@@ -280,44 +477,64 @@ export const ExecutiveDriveExplorer: React.FC = () => {
               )}
               <span>
                 {isLoggingIn
-                  ? t('Connecting to Google...', 'جارٍ الاتصال بحساب Google...')
+                  ? t('Connecting...', 'جارٍ الاتصال...')
                   : t('Sign in with Google Drive', 'تسجيل الدخول باستخدام Google Drive')}
               </span>
             </button>
+
+            <button
+              onClick={() => setVaultMode('curated')}
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#0D2B4E] text-white text-sm font-semibold hover:bg-[#0A2540] transition-colors w-full sm:w-auto justify-center"
+            >
+              <Sparkles className="w-4 h-4 text-[#B8964A]" />
+              <span>{t('View Curated Dossier Files', 'عرض ملفات المستودع المعتمد')}</span>
+            </button>
           </div>
 
-          {error && (
+          {errorDetails && !errorDetails.isUnauthorizedDomain && (
             <div className="flex items-center justify-center gap-2 text-xs text-rose-600 bg-rose-50 p-3 rounded-lg border border-rose-200">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
+              <span>{errorDetails.friendlyMessage}</span>
             </div>
           )}
         </div>
       ) : (
-        /* Authenticated File Explorer */
+        /* Document Archive & Explorer */
         <div className="space-y-5">
           {/* Controls: Search + Type Filters */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             {/* Search Input */}
-            <form onSubmit={handleSearchSubmit} className="relative flex-1">
+            <div className="relative flex-1">
               <Search className="w-4 h-4 text-gray-400 absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (vaultMode === 'live' && !needsAuth) {
+                    loadLiveFiles(e.target.value, selectedFilter);
+                  }
+                }}
                 placeholder={t(
-                  'Search Drive for resumes, dossiers, publications...',
-                  'ابحث في Drive عن السير الذاتية، التقارير، المنشورات...'
+                  'Search executive dossiers, strategic reports, decks...',
+                  'ابحث في التقارير الاستراتيجية، العروض، ملفات الحالات...'
                 )}
-                className="w-full pl-9 pr-24 rtl:pr-9 rtl:pl-24 py-2 bg-[#F6F3ED] border border-[#0D2B4E]/15 rounded-lg text-xs text-[#0D2B4E] focus:outline-none focus:ring-1 focus:ring-[#B8964A]"
+                className="w-full pl-9 pr-8 rtl:pr-9 rtl:pl-8 py-2 bg-[#F6F3ED] border border-[#0D2B4E]/15 rounded-lg text-xs text-[#0D2B4E] focus:outline-none focus:ring-1 focus:ring-[#B8964A]"
               />
-              <button
-                type="submit"
-                className="absolute right-1.5 rtl:right-auto rtl:left-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[#0D2B4E] text-white text-[11px] font-semibold rounded hover:bg-[#0A2540] transition-colors"
-              >
-                {t('Search', 'بحث')}
-              </button>
-            </form>
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    if (vaultMode === 'live' && !needsAuth) {
+                      loadLiveFiles('', selectedFilter);
+                    }
+                  }}
+                  className="absolute right-2.5 rtl:right-auto rtl:left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
             {/* Filter Pills */}
             <div className="flex flex-wrap items-center gap-1.5">
@@ -332,7 +549,12 @@ export const ExecutiveDriveExplorer: React.FC = () => {
               ).map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => handleFilterChange(tab.id)}
+                  onClick={() => {
+                    setSelectedFilter(tab.id);
+                    if (vaultMode === 'live' && !needsAuth) {
+                      loadLiveFiles(searchQuery, tab.id);
+                    }
+                  }}
                   className={`px-2.5 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-all ${
                     selectedFilter === tab.id
                       ? 'bg-[#B8964A] text-[#060F1A] font-bold shadow-xs'
@@ -343,14 +565,16 @@ export const ExecutiveDriveExplorer: React.FC = () => {
                 </button>
               ))}
 
-              <button
-                onClick={() => loadFiles(searchQuery, selectedFilter)}
-                className="p-1.5 rounded-md bg-[#F6F3ED] text-[#0D2B4E] hover:bg-[#EAE4D7] border border-[#0D2B4E]/10"
-                title={t('Refresh Files', 'تحديث القائمة')}
-                aria-label="Refresh files list"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingFiles ? 'animate-spin' : ''}`} />
-              </button>
+              {vaultMode === 'live' && (
+                <button
+                  onClick={() => loadLiveFiles(searchQuery, selectedFilter)}
+                  className="p-1.5 rounded-md bg-[#F6F3ED] text-[#0D2B4E] hover:bg-[#EAE4D7] border border-[#0D2B4E]/10"
+                  title={t('Refresh Files', 'تحديث القائمة')}
+                  aria-label="Refresh files list"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingFiles ? 'animate-spin' : ''}`} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -358,40 +582,29 @@ export const ExecutiveDriveExplorer: React.FC = () => {
           {loadingFiles ? (
             <div className="py-12 text-center text-xs text-[#4B5563] space-y-2">
               <RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#B8964A]" />
-              <div>{t('Loading Google Drive files...', 'جارٍ تحميل ملفات Google Drive...')}</div>
+              <div>{t('Loading Drive files...', 'جارٍ تحميل الملفات...')}</div>
             </div>
-          ) : error ? (
-            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <div className="flex-1">{error}</div>
-              <button
-                onClick={() => handleSignIn()}
-                className="px-3 py-1 bg-rose-600 text-white rounded font-semibold hover:bg-rose-700"
-              >
-                {t('Re-authenticate', 'إعادة تسجيل الدخول')}
-              </button>
-            </div>
-          ) : files.length === 0 ? (
+          ) : displayFiles.length === 0 ? (
             <div className="py-12 text-center bg-[#F6F3ED]/60 rounded-xl border border-dashed border-[#0D2B4E]/15 space-y-2">
               <FileText className="w-8 h-8 mx-auto text-[#B8964A]/60" />
               <div className="text-sm font-medium text-[#0D2B4E]">
-                {t('No matching Google Drive files found', 'لم يتم العثور على ملفات متطابقة')}
+                {t('No matching files found', 'لم يتم العثور على ملفات مطابقة')}
               </div>
               <p className="text-xs text-[#4B5563] font-light max-w-sm mx-auto">
                 {t(
-                  'Upload or ensure your executive case studies or PDF briefs are saved to your Drive, or adjust your search filter.',
-                  'تأكد من وجود وثائق أو ملفات PDF في حسابك، أو قم بتغيير عبارة البحث.'
+                  'Adjust your search keywords or select "All Files" to view available documents.',
+                  'قم بتعديل كلمات البحث أو اختر "كافة الملفات" لعرض المستندات المتاحة.'
                 )}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {files.map((file) => {
+              {displayFiles.map((file) => {
                 const isCopied = copiedId === file.id;
                 return (
                   <div
                     key={file.id}
-                    className="p-4 rounded-xl bg-[#F6F3ED] border border-[#0D2B4E]/10 hover:border-[#B8964A]/40 transition-all flex flex-col justify-between gap-3 group"
+                    className="p-4 rounded-xl bg-[#F6F3ED] border border-[#0D2B4E]/10 hover:border-[#B8964A]/40 hover:shadow-md transition-all flex flex-col justify-between gap-3 group"
                   >
                     <div className="flex items-start gap-3">
                       <div className="p-2 rounded-lg bg-white shadow-xs shrink-0 mt-0.5">
@@ -423,7 +636,7 @@ export const ExecutiveDriveExplorer: React.FC = () => {
                       <button
                         onClick={() => handleCopyLink(file)}
                         className="inline-flex items-center gap-1 text-[11px] text-[#4B5563] hover:text-[#0D2B4E] transition-colors"
-                        title={t('Copy Drive Link', 'نسخ الرابط')}
+                        title={t('Copy Link', 'نسخ الرابط')}
                       >
                         {isCopied ? (
                           <>
@@ -444,11 +657,15 @@ export const ExecutiveDriveExplorer: React.FC = () => {
                         {file.webViewLink && (
                           <a
                             href={file.webViewLink}
-                            target="_blank"
+                            target={file.webViewLink.startsWith('#') ? '_self' : '_blank'}
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0D2B4E] text-white rounded text-[11px] font-semibold hover:bg-[#0A2540] transition-colors"
                           >
-                            <span>{t('Open in Drive', 'فتح في Drive')}</span>
+                            <span>
+                              {file.webViewLink.startsWith('#')
+                                ? t('View Section', 'عرض القسم')
+                                : t('Open Resource', 'فتح الملف')}
+                            </span>
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         )}

@@ -2,8 +2,8 @@ import React from 'react';
 import { FileText, Mail, ArrowUpRight, ShieldCheck, Globe, Award, Sparkles } from 'lucide-react';
 import { PROFILE_INFO } from '../data/profileData';
 import { useLanguage } from '../context/LanguageContext';
-import executivePortrait from '../assets/images/yousef-baarah-profile.jpg';
-import galaEventPortrait from '../assets/images/yousef-baarah-event.jpg';
+import executivePortrait from '../assets/images/yousef_baarah_profile_1787473817180.jpg';
+import galaEventPortrait from '../assets/images/yousef_baarah_event_1787473878121.jpg';
 
 interface HeroProps {
   onOpenDocuments: () => void;
